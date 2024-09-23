@@ -1,0 +1,5 @@
+.git/
+bin/
+Dockerfile
+Makefile
+compose.yaml

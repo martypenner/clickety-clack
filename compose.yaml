@@ -1,0 +1,34 @@
+services:
+  build-linux:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: build-linux
+      args:
+        - GO_VERSION=${GO_VERSION}
+    volumes:
+      - ./bin:/app/bin
+    command: ['sh', '-c', 'go build -o bin/${BINARY_NAME}_linux_amd64']
+
+  # Built natively on the host machine
+  # build-macos:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #     target: build-macos
+  #     args:
+  #       - GO_VERSION=${GO_VERSION}
+  #   volumes:
+  #     - ./bin:/app/bin
+  #   command: ['sh', '-c', 'go build -o bin/${BINARY_NAME}_darwin_amd64']
+
+  build-windows:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: build-windows
+      args:
+        - GO_VERSION=${GO_VERSION}
+    volumes:
+      - ./bin:/app/bin
+    command: ['sh', '-c', 'go build -o bin/${BINARY_NAME}_windows_amd64.exe']
