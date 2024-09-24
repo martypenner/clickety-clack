@@ -2,15 +2,20 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"clickety-clack/keylistener"
+	"clickety-clack/soundplayer"
 )
 
 func main() {
+	soundsDir := flag.String("sounds", "sounds", "Directory containing sound files")
+	flag.Parse()
+
 	// Create a new KeyListener using gohook
 	listener := keylistener.NewGohookKeyListener()
 	if listener == nil {
@@ -22,11 +27,17 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	keyChan := make(chan rune)
+	// Create a buffered channel with a capacity of 100
+	keyChan := make(chan rune, 100)
 
-	// Start the key listener with context
+	player, err := soundplayer.NewPlayer(*soundsDir)
+	if err != nil {
+		fmt.Printf("Error initializing sound player: %v\n", err)
+		return
+	}
+
 	fmt.Println("Starting key listener...")
-	err := listener.Start(ctx, keyChan)
+	err = listener.Start(ctx, keyChan)
 	if err != nil {
 		fmt.Printf("Error starting key listener: %v\n", err)
 		return
@@ -52,7 +63,12 @@ func main() {
 					return
 				}
 				fmt.Printf("Debug: Received key event. Key: %q (Code: %d)\n", key, key)
-				// TODO: Add code to play sounds based on the key
+
+				err := player.PlaySound(int(key))
+				if err != nil {
+					fmt.Printf("Error playing sound: %v\n", err)
+				}
+
 			case sig := <-sigs:
 				fmt.Printf("\nReceived signal: %v. Shutting down...\n", sig)
 				cancel()

@@ -32,5 +32,6 @@ build-macos:
 .PHONY: clean
 clean:
 	$(GOCLEAN)
+	$(GOCMD) mod tidy
 	rm -rf $(OUTPUT_DIR)
 	GO_VERSION=$(GO_VERSION) BINARY_NAME=$(BINARY_NAME) $(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) rm -f --stop --volumes
