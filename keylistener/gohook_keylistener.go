@@ -60,18 +60,17 @@ func (g *gohookKeyListener) Start(ctx context.Context, ch chan<- rune) error {
 				if !g.pressedKeys[event.Rawcode] {
 					g.pressedKeys[event.Rawcode] = true
 					keyRune, ok = keyEventToRune(event)
+					if ok {
+						fmt.Printf("Debug: Sending key rune: %q\n", keyRune)
+						ch <- keyRune
+					} else {
+						fmt.Println("Debug: Failed to convert key event to rune")
+					}
 				}
 			case hook.KeyUp:
 				delete(g.pressedKeys, event.Rawcode)
 			}
 			g.mutex.Unlock()
-
-			if ok {
-				fmt.Printf("Debug: Sending key rune: %q\n", keyRune)
-				ch <- keyRune
-			} else if event.Kind == hook.KeyDown {
-				fmt.Println("Debug: Failed to convert key event to rune")
-			}
 		}
 	}()
 
