@@ -2,23 +2,27 @@ package soundplayer
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/gopxl/beep"
-	"github.com/gopxl/beep/speaker"
-	"github.com/gopxl/beep/wav"
+	"github.com/gopxl/beep/v2"
+	"github.com/gopxl/beep/v2/effects"
+	"github.com/gopxl/beep/v2/speaker"
+	"github.com/gopxl/beep/v2/wav"
 )
 
 type BeepPlayer struct {
 	sounds       map[int]*beep.Buffer
 	defaultSound *beep.Buffer
+	volume       float64
 }
 
 func NewPlayer(soundsDir string) (Player, error) {
 	player := &BeepPlayer{
 		sounds: make(map[int]*beep.Buffer),
+		volume: 100, // Classic 0 to 100 percent volume
 	}
 
 	err := speaker.Init(44100, 1024)
@@ -45,7 +49,6 @@ func NewPlayer(soundsDir string) (Player, error) {
 		}
 		return nil
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to load sounds from directory: %v", err)
 	}
@@ -67,8 +70,28 @@ func (p *BeepPlayer) PlaySound(keyCode int) error {
 		return fmt.Errorf("no sound available for key code %d", keyCode)
 	}
 
-	speaker.Play(beep.Seq(sound.Streamer(0, sound.Len())))
+	// Calculate volume effect based on player's volume (0-200)
+	// 0 on player = 0% volume (-2 on effects)
+	// 100 on player = 100% volume (0 on effects)
+	// 200 on player = 200% volume (2 on effects)
+	maxVolume := 2.0
+	minVolume := -2.0
+	volume := (p.volume/100.0 - 1) * 2 // Linear mapping from 0-200 to -2-2
+	volume = math.Max(minVolume, math.Min(maxVolume, volume))
+	fmt.Println("volume", volume)
+	volumeEffect := &effects.Volume{
+		Streamer: sound.Streamer(0, sound.Len()),
+		Base:     2,
+		Volume:   volume,
+		Silent:   volume == minVolume,
+	}
+
+	speaker.Play(volumeEffect)
 	return nil
+}
+
+func (p *BeepPlayer) SetVolume(volume float64) {
+	p.volume = volume
 }
 
 func loadSound(filepath string) (*beep.Buffer, error) {
@@ -91,4 +114,5 @@ func loadSound(filepath string) (*beep.Buffer, error) {
 
 type Player interface {
 	PlaySound(keyCode int) error
+	SetVolume(volume float64)
 }
