@@ -78,7 +78,6 @@ func (p *BeepPlayer) PlaySound(keyCode int) error {
 	minVolume := -2.0
 	volume := (p.volume/100.0 - 1) * 2 // Linear mapping from 0-200 to -2-2
 	volume = math.Max(minVolume, math.Min(maxVolume, volume))
-	fmt.Println("volume", volume)
 	volumeEffect := &effects.Volume{
 		Streamer: sound.Streamer(0, sound.Len()),
 		Base:     2,

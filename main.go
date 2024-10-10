@@ -8,8 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"clickety-clack/keylistener"
-	"clickety-clack/soundplayer"
+	"clickety-clack/internal/keylistener"
+	"clickety-clack/internal/soundplayer"
 )
 
 func main() {
