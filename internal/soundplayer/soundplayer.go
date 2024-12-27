@@ -9,8 +9,11 @@ import (
 
 	"github.com/gopxl/beep/v2"
 	"github.com/gopxl/beep/v2/effects"
+	"github.com/gopxl/beep/v2/flac"
+	"github.com/gopxl/beep/v2/mp3"
 	"github.com/gopxl/beep/v2/speaker"
 	"github.com/gopxl/beep/v2/vorbis"
+	"github.com/gopxl/beep/v2/wav"
 )
 
 type BeepPlayer struct {
@@ -34,17 +37,20 @@ func NewPlayer(soundsDir string) (Player, error) {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && strings.HasSuffix(strings.ToLower(info.Name()), ".ogg") {
-			keyCode := int(strings.ToLower(info.Name())[0])
-			sound, err := loadSound(path)
-			if err != nil {
-				fmt.Printf("Warning: failed to load sound %s: %v\n", path, err)
-				return nil
-			}
-			player.sounds[keyCode] = sound
+		if !info.IsDir() {
+			ext := strings.ToLower(filepath.Ext(info.Name()))
+			if ext == ".ogg" || ext == ".wav" || ext == ".mp3" || ext == ".flac" {
+				keyCode := int(strings.ToLower(info.Name())[0])
+				sound, err := loadSound(path)
+				if err != nil {
+					fmt.Printf("Warning: failed to load sound %s: %v\n", path, err)
+					return nil
+				}
+				player.sounds[keyCode] = sound
 
-			if player.defaultSound == nil {
-				player.defaultSound = sound
+				if player.defaultSound == nil {
+					player.defaultSound = sound
+				}
 			}
 		}
 		return nil
@@ -108,9 +114,25 @@ func loadSound(filepath string) (*beep.Buffer, error) {
 	}
 	defer f.Close()
 
-	streamer, format, err := vorbis.Decode(f)
+	var streamer beep.StreamSeekCloser
+	var format beep.Format
+
+	ext := strings.ToLower(filepath[strings.LastIndex(filepath, ".")+1:])
+	switch ext {
+	case "ogg":
+		streamer, format, err = vorbis.Decode(f)
+	case "wav":
+		streamer, format, err = wav.Decode(f)
+	case "mp3":
+		streamer, format, err = mp3.Decode(f)
+	case "flac":
+		streamer, format, err = flac.Decode(f)
+	default:
+		return nil, fmt.Errorf("unsupported audio format: %s", ext)
+	}
+
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode %s: %v", ext, err)
 	}
 	defer streamer.Close()
 
