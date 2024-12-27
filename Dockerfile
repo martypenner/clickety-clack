@@ -10,7 +10,7 @@ COPY . .
 
 # Build Linux binary
 FROM --platform=linux/amd64 golang:${GO_VERSION}-alpine AS build-linux
-RUN apk add --no-cache gcc musl-dev libx11-dev libxtst-dev libxkbcommon-dev
+RUN apk add --no-cache gcc musl-dev libx11-dev libxtst-dev libxkbcommon-dev alsa-lib-dev
 WORKDIR /app
 COPY --from=builder /app .
 ENV GOOS=linux
