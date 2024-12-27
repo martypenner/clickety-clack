@@ -10,7 +10,7 @@ import (
 	"github.com/gopxl/beep/v2"
 	"github.com/gopxl/beep/v2/effects"
 	"github.com/gopxl/beep/v2/speaker"
-	"github.com/gopxl/beep/v2/wav"
+	"github.com/gopxl/beep/v2/vorbis"
 )
 
 type BeepPlayer struct {
@@ -34,7 +34,7 @@ func NewPlayer(soundsDir string) (Player, error) {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && strings.HasSuffix(strings.ToLower(info.Name()), ".wav") {
+		if !info.IsDir() && strings.HasSuffix(strings.ToLower(info.Name()), ".ogg") {
 			keyCode := int(strings.ToLower(info.Name())[0])
 			sound, err := loadSound(path)
 			if err != nil {
@@ -70,6 +70,14 @@ func (p *BeepPlayer) PlaySound(keyCode int) error {
 		return fmt.Errorf("no sound available for key code %d", keyCode)
 	}
 
+	// Offset the sound by 20ms to account for the delay in many sound files.
+	// Without this, we're not lined up with mechvibes.
+	// Convert ms to samples (assuming 44100Hz sample rate).
+	// 15ms seemed to be the sweet spot.
+	offsetMs := 15 // 15 milliseconds offset
+	samplesPerMs := 44100 / 1000
+	offsetSamples := offsetMs * samplesPerMs
+
 	// Calculate volume effect based on player's volume (0-200)
 	// 0 on player = 0% volume (-2 on effects)
 	// 100 on player = 100% volume (0 on effects)
@@ -79,7 +87,7 @@ func (p *BeepPlayer) PlaySound(keyCode int) error {
 	volume := (p.volume/100.0 - 1) * 2 // Linear mapping from 0-200 to -2-2
 	volume = math.Max(minVolume, math.Min(maxVolume, volume))
 	volumeEffect := &effects.Volume{
-		Streamer: sound.Streamer(0, sound.Len()),
+		Streamer: sound.Streamer(offsetSamples, sound.Len()),
 		Base:     2,
 		Volume:   volume,
 		Silent:   volume == minVolume,
@@ -100,7 +108,7 @@ func loadSound(filepath string) (*beep.Buffer, error) {
 	}
 	defer f.Close()
 
-	streamer, format, err := wav.Decode(f)
+	streamer, format, err := vorbis.Decode(f)
 	if err != nil {
 		return nil, err
 	}
