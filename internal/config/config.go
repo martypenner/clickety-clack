@@ -2,7 +2,9 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
+	"path/filepath"
 )
 
 type SoundPack struct {
@@ -17,6 +19,8 @@ type SoundPack struct {
 	// Linux evdev codes (3000+ range)
 	// macOS NSEvent keyCodes (61000+ range)
 	Defines map[string]*string `json:"defines,omitempty"`
+	// Directory path relative to sounds directory
+	Directory string `json:"-"`
 }
 
 func LoadSoundPack(filename string) (*SoundPack, error) {
@@ -29,6 +33,9 @@ func LoadSoundPack(filename string) (*SoundPack, error) {
 	if err := json.Unmarshal(data, &config); err != nil {
 		return nil, err
 	}
+
+	// Set the directory to be relative to the sounds directory
+	config.Directory = filepath.Base(filepath.Dir(filename))
 
 	return &config, nil
 }
@@ -45,4 +52,36 @@ func (sp *SoundPack) GetSoundFileName(keyCode string) *string {
 		}
 	}
 	return nil
+}
+
+func ScanSoundPacks(soundsDir string) ([]*SoundPack, error) {
+	var soundPacks []*SoundPack
+
+	err := filepath.Walk(soundsDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !info.IsDir() && filepath.Base(path) == "config.json" {
+			soundPack, err := LoadSoundPack(path)
+			if err != nil {
+				fmt.Printf("Warning: Failed to load sound pack at %s: %v\n", path, err)
+				return nil
+			}
+
+			soundPacks = append(soundPacks, soundPack)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to scan sound packs: %v", err)
+	}
+
+	if len(soundPacks) == 0 {
+		return nil, fmt.Errorf("no valid sound packs found in %s", soundsDir)
+	}
+
+	return soundPacks, nil
 }

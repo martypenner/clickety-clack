@@ -3,13 +3,14 @@ package keylistener
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"sync"
 
 	hook "github.com/robotn/gohook"
 )
 
 type KeyListener interface {
-	Start(ctx context.Context, ch chan<- rune) error
+	Start(ctx context.Context, ch chan<- string) error
 	Stop() error
 }
 
@@ -27,7 +28,7 @@ func NewGohookKeyListener() KeyListener {
 	}
 }
 
-func (g *gohookKeyListener) Start(ctx context.Context, ch chan<- rune) error {
+func (g *gohookKeyListener) Start(ctx context.Context, ch chan<- string) error {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
 
@@ -51,21 +52,14 @@ func (g *gohookKeyListener) Start(ctx context.Context, ch chan<- rune) error {
 
 	go func() {
 		for event := range g.eventsChan {
-			var keyRune rune
-			var ok bool
-
 			g.mutex.Lock()
 			switch event.Kind {
 			case hook.KeyDown:
 				if !g.pressedKeys[event.Rawcode] {
 					g.pressedKeys[event.Rawcode] = true
-					keyRune, ok = keyEventToRune(event)
-					if ok {
-						fmt.Printf("Debug: Sending key rune: %q\n", keyRune)
-						ch <- keyRune
-					} else {
-						fmt.Println("Debug: Failed to convert key event to rune")
-					}
+					keyCode := strconv.Itoa(int(event.Rawcode))
+					fmt.Printf("Debug: Sending key code: %s\n", keyCode)
+					ch <- keyCode
 				}
 			case hook.KeyUp:
 				delete(g.pressedKeys, event.Rawcode)
@@ -92,15 +86,4 @@ func (g *gohookKeyListener) Stop() error {
 	}
 	g.started = false
 	return nil
-}
-
-func keyEventToRune(e hook.Event) (rune, bool) {
-	// Attempt to convert key to rune
-	if e.Keychar != 0 {
-		r := rune(e.Keychar)
-		return r, true
-	}
-
-	fmt.Printf("Debug: Unhandled key event: %+v\n", e)
-	return 0, false
 }

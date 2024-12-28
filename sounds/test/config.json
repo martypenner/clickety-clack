@@ -1,0 +1,20 @@
+{
+  "id": "custom-sound-pack-1",
+  "name": "test",
+  "key_define_type": "multi",
+  "includes_numpad": false,
+  "defines": {
+    "13": "a.wav",
+    "30": "a.wav",
+    "65": "a.wav",
+    "82": "a.wav",
+    "48": "b.wav",
+    "70": "b.wav",
+    "19": "r.ogg",
+    "3657": "r.ogg",
+    "61001": "r.ogg",
+    "31": "snap-test.ogg",
+    "61": "snap-test.ogg",
+    "79": "snap-test.ogg"
+  }
+}

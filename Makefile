@@ -13,7 +13,7 @@ DOCKER_COMPOSE_FILE=compose.yaml
 # Run
 .PHONY: run
 run:
-	go run . --soundsDir=./sounds/YUNZII_C68_-_AnDr3W --config=./sounds/YUNZII_C68_-_AnDr3W/config.json
+	go run .
 
 # Build targets
 .PHONY: all

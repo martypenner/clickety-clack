@@ -7,8 +7,8 @@ import (
 	"math"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/gopxl/beep/v2"
 	"github.com/gopxl/beep/v2/effects"
@@ -19,32 +19,32 @@ import (
 	"github.com/gopxl/beep/v2/wav"
 )
 
+var speakerInitialized bool
+
 type BeepPlayer struct {
-	sounds       map[int]*beep.Buffer
+	sounds       map[string]*beep.Buffer
 	defaultSound *beep.Buffer
 	volume       float64
+	mutex        sync.Mutex
 }
 
 func NewPlayer(soundsDir string, soundPack *config.SoundPack) (Player, error) {
 	player := &BeepPlayer{
-		sounds: make(map[int]*beep.Buffer),
+		sounds: make(map[string]*beep.Buffer),
 		volume: 100, // Classic 0 to 100 percent volume
 	}
 
-	err := speaker.Init(44100, 1024)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize speaker: %v", err)
+	if !speakerInitialized {
+		err := speaker.Init(44100, 1024)
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize speaker: %v", err)
+		}
+		speakerInitialized = true
 	}
 
 	// Load only the sounds defined in the config
 	for keyCodeStr, soundFile := range soundPack.Defines {
 		if soundFile == nil {
-			continue
-		}
-
-		keyCode, err := strconv.Atoi(keyCodeStr)
-		if err != nil {
-			fmt.Printf("Warning: invalid key code %s: %v\n", keyCodeStr, err)
 			continue
 		}
 
@@ -55,7 +55,7 @@ func NewPlayer(soundsDir string, soundPack *config.SoundPack) (Player, error) {
 			continue
 		}
 
-		player.sounds[keyCode] = sound
+		player.sounds[keyCodeStr] = sound
 
 		if player.defaultSound == nil {
 			player.defaultSound = sound
@@ -69,14 +69,21 @@ func NewPlayer(soundsDir string, soundPack *config.SoundPack) (Player, error) {
 	return player, nil
 }
 
-func (p *BeepPlayer) PlaySound(keyCode int) error {
+func (p *BeepPlayer) PlaySound(keyCode string) error {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	if p.sounds == nil {
+		return fmt.Errorf("player has been cleaned up")
+	}
+
 	sound, ok := p.sounds[keyCode]
 	if !ok {
 		sound = p.defaultSound
 	}
 
 	if sound == nil {
-		return fmt.Errorf("no sound available for key code %d", keyCode)
+		return fmt.Errorf("no sound available for key code %s", keyCode)
 	}
 
 	// Offset the sound by 20ms to account for the delay in many sound files.
@@ -107,7 +114,18 @@ func (p *BeepPlayer) PlaySound(keyCode int) error {
 }
 
 func (p *BeepPlayer) SetVolume(volume float64) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
 	p.volume = volume
+}
+
+func (p *BeepPlayer) Cleanup() {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	p.sounds = nil
+	p.defaultSound = nil
+
+	// Let the garbage collector handle the actual cleanup of the buffers
 }
 
 func loadSound(filepath string) (*beep.Buffer, error) {
@@ -145,6 +163,7 @@ func loadSound(filepath string) (*beep.Buffer, error) {
 }
 
 type Player interface {
-	PlaySound(keyCode int) error
+	PlaySound(keyCode string) error
 	SetVolume(volume float64)
+	Cleanup()
 }
