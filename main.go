@@ -102,10 +102,37 @@ func main() {
 	soundSelector.SetSelected(soundPacks[0].Name)
 
 	// Create show tray icon checkbox
-	showTrayIcon := widget.NewCheck("Show Tray Icon", func(checked bool) {
+	showTrayIcon := widget.NewCheck("Show tray icon", func(checked bool) {
 		fmt.Printf("Show tray icon: %v\n", checked)
 	})
 	showTrayIcon.SetChecked(true)
+
+	// Set up system tray if supported
+	if desk, ok := app.(desktop.App); ok {
+		systrayMenu := fyne.NewMenu("Mechvibes",
+			fyne.NewMenuItem("Show", func() {
+				mainWindow.Show()
+			}),
+			fyne.NewMenuItem("Quit", func() {
+				app.Quit()
+			}))
+
+		// Initial tray icon state
+		if showTrayIcon.Checked {
+			desk.SetSystemTrayMenu(systrayMenu)
+			desk.SetSystemTrayIcon(theme.VolumeUpIcon())
+		}
+
+		showTrayIcon.OnChanged = func(checked bool) {
+			if checked {
+				desk.SetSystemTrayMenu(systrayMenu)
+				desk.SetSystemTrayIcon(theme.VolumeUpIcon())
+			} else {
+				desk.SetSystemTrayMenu(nil)
+				desk.SetSystemTrayIcon(nil)
+			}
+		}
+	}
 
 	// Create random sound button
 	randomSound := widget.NewButton("Set random sound", func() {
@@ -127,19 +154,6 @@ func main() {
 	)
 
 	mainWindow.SetContent(content)
-
-	// Set up system tray if supported
-	if desk, ok := app.(desktop.App); ok {
-		systrayMenu := fyne.NewMenu("Mechvibes",
-			fyne.NewMenuItem("Show", func() {
-				mainWindow.Show()
-			}),
-			fyne.NewMenuItem("Quit", func() {
-				app.Quit()
-			}))
-		desk.SetSystemTrayMenu(systrayMenu)
-		desk.SetSystemTrayIcon(theme.VolumeUpIcon())
-	}
 
 	// Handle volume changes
 	go func() {

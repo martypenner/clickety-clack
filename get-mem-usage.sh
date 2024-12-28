@@ -1,11 +1,6 @@
 #!/bin/bash
 
-if [ $# -eq 0 ]; then
-  echo "Usage: $0 <process_name>"
-  exit 1
-fi
-
-process_name=$1
+process_name=clickety-clack
 
 # Find the parent process ID
 parent_pid=$(pgrep -o "$process_name")
