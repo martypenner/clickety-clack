@@ -10,6 +10,11 @@ GO_VERSION=$(shell grep -E '^go [0-9]+\.[0-9]+' go.mod | awk '{print $$2}')
 DOCKER_COMPOSE=docker compose
 DOCKER_COMPOSE_FILE=compose.yaml
 
+# Run
+.PHONY: run
+run:
+	go run . --soundsDir=./sounds/YUNZII_C68_-_AnDr3W --config=./sounds/YUNZII_C68_-_AnDr3W/config.json
+
 # Build targets
 .PHONY: all
 all: clean build
