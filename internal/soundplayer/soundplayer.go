@@ -1,10 +1,13 @@
 package soundplayer
 
 import (
+	"clickety-clack/internal/config"
+
 	"fmt"
 	"math"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/gopxl/beep/v2"
@@ -22,7 +25,7 @@ type BeepPlayer struct {
 	volume       float64
 }
 
-func NewPlayer(soundsDir string) (Player, error) {
+func NewPlayer(soundsDir string, soundPack *config.SoundPack) (Player, error) {
 	player := &BeepPlayer{
 		sounds: make(map[int]*beep.Buffer),
 		volume: 100, // Classic 0 to 100 percent volume
@@ -33,30 +36,30 @@ func NewPlayer(soundsDir string) (Player, error) {
 		return nil, fmt.Errorf("failed to initialize speaker: %v", err)
 	}
 
-	err = filepath.Walk(soundsDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
+	// Load only the sounds defined in the config
+	for keyCodeStr, soundFile := range soundPack.Defines {
+		if soundFile == nil {
+			continue
 		}
-		if !info.IsDir() {
-			ext := strings.ToLower(filepath.Ext(info.Name()))
-			if ext == ".ogg" || ext == ".wav" || ext == ".mp3" || ext == ".flac" {
-				keyCode := int(strings.ToLower(info.Name())[0])
-				sound, err := loadSound(path)
-				if err != nil {
-					fmt.Printf("Warning: failed to load sound %s: %v\n", path, err)
-					return nil
-				}
-				player.sounds[keyCode] = sound
 
-				if player.defaultSound == nil {
-					player.defaultSound = sound
-				}
-			}
+		keyCode, err := strconv.Atoi(keyCodeStr)
+		if err != nil {
+			fmt.Printf("Warning: invalid key code %s: %v\n", keyCodeStr, err)
+			continue
 		}
-		return nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to load sounds from directory: %v", err)
+
+		soundPath := filepath.Join(soundsDir, *soundFile)
+		sound, err := loadSound(soundPath)
+		if err != nil {
+			fmt.Printf("Warning: failed to load sound %s: %v\n", soundPath, err)
+			continue
+		}
+
+		player.sounds[keyCode] = sound
+
+		if player.defaultSound == nil {
+			player.defaultSound = sound
+		}
 	}
 
 	if player.defaultSound == nil {

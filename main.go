@@ -1,6 +1,7 @@
 package main
 
 import (
+	"clickety-clack/internal/config"
 	"clickety-clack/internal/keylistener"
 	"clickety-clack/internal/soundplayer"
 
@@ -21,8 +22,16 @@ import (
 )
 
 func main() {
-	soundsDir := flag.String("sounds", "sounds", "Directory containing sound files")
+	soundsDir := flag.String("soundsDir", "sounds", "Directory containing sound files")
+	configFile := flag.String("config", "config.json", "Path to sound pack configuration file")
 	flag.Parse()
+
+	// Load sound pack configuration
+	soundPack, err := config.LoadSoundPack(*configFile)
+	if err != nil {
+		fmt.Printf("Error loading sound pack configuration: %v\n", err)
+		return
+	}
 
 	// Create a new KeyListener using gohook
 	listener := keylistener.NewGohookKeyListener()
@@ -38,7 +47,7 @@ func main() {
 	// Create a buffered channel with a capacity of 100
 	keyChan := make(chan rune, 100)
 
-	player, err := soundplayer.NewPlayer(*soundsDir)
+	player, err := soundplayer.NewPlayer(*soundsDir, soundPack)
 	if err != nil {
 		fmt.Printf("Error initializing sound player: %v\n", err)
 		return
@@ -72,8 +81,8 @@ func main() {
 	})
 
 	// Create more sounds button
-	moreSounds := widget.NewButton("More sounds...", func() {
-		fmt.Println("Opening more sounds...")
+	moreSounds := widget.NewButton("More sounds…", func() {
+		fmt.Println("Opening more sounds…")
 	})
 
 	// Layout the UI
